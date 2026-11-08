@@ -12,12 +12,12 @@ export default function App() {
   const [skills, setSkills] = useState([]);
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
+  const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Load saved skills when the app starts
     const loadSkills = async () => {
       try {
         const savedSkills = await AsyncStorage.getItem(STORAGE_KEY);
@@ -44,48 +44,134 @@ export default function App() {
     }).start();
   }, []);
 
-  // Save the latest skill list
+  // Save all skill changes
   const saveSkills = async (updatedSkills) => {
     try {
-      await AsyncStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(updatedSkills)
-      );
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedSkills));
       setSkills(updatedSkills);
     } catch (error) {
-      Alert.alert('Error', 'Unable to save your skills.');
+      Alert.alert('Error', 'Unable to save your changes.');
     }
   };
 
-  // Add a new skill
-  const addSkill = async () => {
+  // Add a new skill or update an existing one
+  const handleSave = async () => {
     if (!name.trim() || !category.trim()) {
       Alert.alert('Missing Information', 'Please fill in both fields.');
       return;
     }
 
-    const newSkill = {
-      id: Date.now().toString(),
-      name: name.trim(),
-      category: category.trim(),
-      progress: 0,
-    };
+    let updatedSkills;
 
-    await saveSkills([...skills, newSkill]);
+    if (editingId) {
+      updatedSkills = skills.map((skill) =>
+        skill.id === editingId
+          ? { ...skill, name: name.trim(), category: category.trim() }
+          : skill
+      );
+    } else {
+      const newSkill = {
+        id: Date.now().toString(),
+        name: name.trim(),
+        category: category.trim(),
+        progress: 0,
+      };
+
+      updatedSkills = [...skills, newSkill];
+    }
+
+    await saveSkills(updatedSkills);
+    cancelEdit();
+  };
+
+  // Put selected skill details into the form
+  const handleEdit = (skill) => {
+    setEditingId(skill.id);
+    setName(skill.name);
+    setCategory(skill.category);
+  };
+
+  // Clear the form
+  const cancelEdit = () => {
+    setEditingId(null);
     setName('');
     setCategory('');
   };
 
+  // Delete a selected skill
+  const handleDelete = (id) => {
+    Alert.alert('Delete Skill', 'Are you sure you want to delete this skill?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          const updatedSkills = skills.filter((skill) => skill.id !== id);
+          saveSkills(updatedSkills);
+
+          if (editingId === id) {
+            cancelEdit();
+          }
+        },
+      },
+    ]);
+  };
+
+  // Change skill progress by 10 percent
+  const updateProgress = (id, amount) => {
+    const updatedSkills = skills.map((skill) =>
+      skill.id === id
+        ? {
+            ...skill,
+            progress: Math.max(0, Math.min(100, skill.progress + amount)),
+          }
+        : skill
+    );
+
+    saveSkills(updatedSkills);
+  };
+
   const renderSkill = ({ item }) => (
     <Animated.View style={[styles.card, { opacity: fadeAnim }]}>
-      <Text style={styles.skillName}>{item.name}</Text>
-      <Text style={styles.category}>{item.category}</Text>
+      <View style={styles.cardTop}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.skillName}>{item.name}</Text>
+          <Text style={styles.category}>{item.category}</Text>
+        </View>
+
+        <TouchableOpacity onPress={() => handleEdit(item)}>
+          <Text style={styles.editText}>Edit</Text>
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.progressBackground}>
         <View style={[styles.progress, { width: `${item.progress}%` }]} />
       </View>
 
       <Text style={styles.percent}>{item.progress}% completed</Text>
+
+      <View style={styles.actions}>
+        <TouchableOpacity
+          style={styles.smallButton}
+          onPress={() => updateProgress(item.id, -10)}
+        >
+          <Text style={styles.smallButtonText}>-10%</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.smallButton}
+          onPress={() => updateProgress(item.id, 10)}
+        >
+          <Text style={styles.smallButtonText}>+10%</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => handleDelete(item.id)}
+        >
+          <Text style={styles.deleteText}>Delete</Text>
+        </TouchableOpacity>
+      </View>
     </Animated.View>
   );
 
@@ -108,11 +194,13 @@ export default function App() {
       <View style={styles.headerCard}>
         <Text style={styles.welcome}>Keep Growing!</Text>
         <Text style={styles.headerText}>
-          Your learning journey is saved and ready.
+          Every little improvement matters.
         </Text>
       </View>
 
-      <Text style={styles.sectionTitle}>Add a New Skill</Text>
+      <Text style={styles.sectionTitle}>
+        {editingId ? 'Update Skill' : 'Add a New Skill'}
+      </Text>
 
       <View style={styles.form}>
         <TextInput
@@ -131,12 +219,20 @@ export default function App() {
           onChangeText={setCategory}
         />
 
-        <TouchableOpacity style={styles.addButton} onPress={addSkill}>
-          <Text style={styles.buttonText}>+ Add Skill</Text>
+        <TouchableOpacity style={styles.addButton} onPress={handleSave}>
+          <Text style={styles.buttonText}>
+            {editingId ? 'Save Changes' : '+ Add Skill'}
+          </Text>
         </TouchableOpacity>
+
+        {editingId && (
+          <TouchableOpacity style={styles.cancelButton} onPress={cancelEdit}>
+            <Text style={styles.cancelText}>Cancel Editing</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      <Text style={styles.sectionTitle}>My Skills</Text>
+      <Text style={styles.sectionTitle}>My Skills ({skills.length})</Text>
 
       <FlatList
         data={skills}
@@ -166,11 +262,20 @@ const styles = StyleSheet.create({
   input: { backgroundColor: '#FFF0F5', borderRadius: 12, padding: 13, marginBottom: 10, color: '#843B59' },
   addButton: { backgroundColor: '#E75480', padding: 14, borderRadius: 12, alignItems: 'center' },
   buttonText: { color: 'white', fontWeight: 'bold' },
+  cancelButton: { padding: 10, alignItems: 'center' },
+  cancelText: { color: '#C74370', fontWeight: 'bold' },
   card: { backgroundColor: 'white', padding: 18, borderRadius: 18, marginBottom: 14, elevation: 3 },
+  cardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   skillName: { fontSize: 18, fontWeight: 'bold', color: '#C74370' },
-  category: { color: '#A66A7E', marginVertical: 7 },
+  category: { color: '#A66A7E', marginTop: 5 },
+  editText: { color: '#E75480', fontWeight: 'bold', padding: 8 },
   progressBackground: { height: 9, backgroundColor: '#FCE0EA', borderRadius: 10, overflow: 'hidden' },
   progress: { height: 9, backgroundColor: '#E75480', borderRadius: 10 },
   percent: { color: '#A66A7E', marginTop: 8, textAlign: 'right' },
+  actions: { flexDirection: 'row', alignItems: 'center', marginTop: 13, gap: 8 },
+  smallButton: { backgroundColor: '#FCE0EA', padding: 9, borderRadius: 10 },
+  smallButtonText: { color: '#C74370', fontWeight: 'bold' },
+  deleteButton: { backgroundColor: '#FFF0F0', padding: 9, borderRadius: 10, marginLeft: 'auto' },
+  deleteText: { color: '#D94A70', fontWeight: 'bold' },
   emptyText: { textAlign: 'center', color: '#A66A7E', padding: 20 },
 });
