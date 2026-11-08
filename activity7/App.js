@@ -1,23 +1,42 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, Animated,
-  TextInput, TouchableOpacity, StatusBar, Alert
+  TextInput, TouchableOpacity, StatusBar, Alert,
+  ActivityIndicator
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY = '@skillquest_skills';
 
 export default function App() {
-  const [skills, setSkills] = useState([
-    { id: '1', name: 'React Native', category: 'Programming', progress: 65 },
-    { id: '2', name: 'Graphic Design', category: 'Creativity', progress: 40 },
-  ]);
-
+  const [skills, setSkills] = useState([]);
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
+  const [loading, setLoading] = useState(true);
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Load saved skills when the app starts
+    const loadSkills = async () => {
+      try {
+        const savedSkills = await AsyncStorage.getItem(STORAGE_KEY);
+
+        if (savedSkills !== null) {
+          const parsedSkills = JSON.parse(savedSkills);
+          if (Array.isArray(parsedSkills)) {
+            setSkills(parsedSkills);
+          }
+        }
+      } catch (error) {
+        Alert.alert('Error', 'Unable to load saved skills.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSkills();
+
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 800,
@@ -25,7 +44,7 @@ export default function App() {
     }).start();
   }, []);
 
-  // Save the updated skill list to device storage
+  // Save the latest skill list
   const saveSkills = async (updatedSkills) => {
     try {
       await AsyncStorage.setItem(
@@ -38,7 +57,7 @@ export default function App() {
     }
   };
 
-  // Add a new skill and save it
+  // Add a new skill
   const addSkill = async () => {
     if (!name.trim() || !category.trim()) {
       Alert.alert('Missing Information', 'Please fill in both fields.');
@@ -61,12 +80,23 @@ export default function App() {
     <Animated.View style={[styles.card, { opacity: fadeAnim }]}>
       <Text style={styles.skillName}>{item.name}</Text>
       <Text style={styles.category}>{item.category}</Text>
+
       <View style={styles.progressBackground}>
         <View style={[styles.progress, { width: `${item.progress}%` }]} />
       </View>
+
       <Text style={styles.percent}>{item.progress}% completed</Text>
     </Animated.View>
   );
+
+  if (loading) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color="#E75480" />
+        <Text style={styles.loadingText}>Loading your skills...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -78,7 +108,7 @@ export default function App() {
       <View style={styles.headerCard}>
         <Text style={styles.welcome}>Keep Growing!</Text>
         <Text style={styles.headerText}>
-          Your skills are saved on your device.
+          Your learning journey is saved and ready.
         </Text>
       </View>
 
@@ -92,6 +122,7 @@ export default function App() {
           value={name}
           onChangeText={setName}
         />
+
         <TextInput
           style={styles.input}
           placeholder="Enter category"
@@ -99,6 +130,7 @@ export default function App() {
           value={category}
           onChangeText={setCategory}
         />
+
         <TouchableOpacity style={styles.addButton} onPress={addSkill}>
           <Text style={styles.buttonText}>+ Add Skill</Text>
         </TouchableOpacity>
@@ -111,6 +143,9 @@ export default function App() {
         renderItem={renderSkill}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingBottom: 30 }}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>No skills yet. Add your first skill!</Text>
+        }
         showsVerticalScrollIndicator={false}
       />
     </View>
@@ -119,6 +154,8 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF0F5', paddingTop: 55, paddingHorizontal: 20 },
+  loading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF0F5' },
+  loadingText: { color: '#C74370', marginTop: 12 },
   logo: { fontSize: 29, fontWeight: 'bold', color: '#E75480' },
   subtitle: { color: '#A66A7E', marginTop: 5, marginBottom: 20 },
   headerCard: { backgroundColor: '#F7A8C4', padding: 22, borderRadius: 22, marginBottom: 22 },
@@ -135,4 +172,5 @@ const styles = StyleSheet.create({
   progressBackground: { height: 9, backgroundColor: '#FCE0EA', borderRadius: 10, overflow: 'hidden' },
   progress: { height: 9, backgroundColor: '#E75480', borderRadius: 10 },
   percent: { color: '#A66A7E', marginTop: 8, textAlign: 'right' },
+  emptyText: { textAlign: 'center', color: '#A66A7E', padding: 20 },
 });
