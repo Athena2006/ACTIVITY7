@@ -304,18 +304,12 @@ export default function App() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.loadingContainer}>
-        <StatusBar
-          backgroundColor="#FFF0F5"
-          barStyle="dark-content"
-        />
+      <SafeAreaView style={styles.loadingContainer} edges={['top', 'bottom']}>
+        <StatusBar backgroundColor="#FFF0F5" barStyle="dark-content" />
 
         <Text style={styles.loadingLogo}>SkillQuest ♡</Text>
 
-        <ActivityIndicator
-          size="large"
-          color="#E75480"
-        />
+        <ActivityIndicator size="large" color="#E75480" />
 
         <Text style={styles.loadingText}>
           Preparing your learning journey...
@@ -325,7 +319,10 @@ export default function App() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={styles.safeArea}
+      edges={['top', 'left', 'right', 'bottom']}
+    >
       <StatusBar
         backgroundColor="#FFF0F5"
         barStyle="dark-content"
@@ -333,14 +330,17 @@ export default function App() {
 
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <FlatList
+          style={styles.flatList}
           data={skills}
           renderItem={renderSkill}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           contentContainerStyle={styles.listContent}
           ListHeaderComponent={
             <>
@@ -400,9 +400,7 @@ export default function App() {
                     <Text style={styles.statNumber}>
                       {totalSkills}
                     </Text>
-                    <Text style={styles.statLabel}>
-                      Total Skills
-                    </Text>
+                    <Text style={styles.statLabel}>Total Skills</Text>
                   </View>
 
                   <View style={styles.statCard}>
@@ -410,9 +408,7 @@ export default function App() {
                     <Text style={styles.statNumber}>
                       {completedSkills}
                     </Text>
-                    <Text style={styles.statLabel}>
-                      Completed
-                    </Text>
+                    <Text style={styles.statLabel}>Completed</Text>
                   </View>
 
                   <View style={styles.statCard}>
@@ -420,9 +416,7 @@ export default function App() {
                     <Text style={styles.statNumber}>
                       {averageProgress}%
                     </Text>
-                    <Text style={styles.statLabel}>
-                      Average
-                    </Text>
+                    <Text style={styles.statLabel}>Average</Text>
                   </View>
                 </View>
 
@@ -432,9 +426,7 @@ export default function App() {
                 </Text>
 
                 <View style={styles.formCard}>
-                  <Text style={styles.inputLabel}>
-                    Skill Name
-                  </Text>
+                  <Text style={styles.inputLabel}>Skill Name</Text>
 
                   <TextInput
                     style={styles.input}
@@ -442,11 +434,10 @@ export default function App() {
                     placeholderTextColor="#C28A9E"
                     value={name}
                     onChangeText={setName}
+                    returnKeyType="next"
                   />
 
-                  <Text style={styles.inputLabel}>
-                    Category
-                  </Text>
+                  <Text style={styles.inputLabel}>Category</Text>
 
                   <TextInput
                     style={styles.input}
@@ -454,6 +445,7 @@ export default function App() {
                     placeholderTextColor="#C28A9E"
                     value={category}
                     onChangeText={setCategory}
+                    returnKeyType="done"
                   />
 
                   <TouchableOpacity
@@ -488,15 +480,13 @@ export default function App() {
 
                 {/* Skill list title */}
                 <View style={styles.skillListHeader}>
-                  <Text style={styles.sectionTitle}>
-                    My Skills
-                  </Text>
+                  <Text style={styles.sectionTitle}>My Skills</Text>
 
                   <Text style={styles.skillCount}>
                     {totalSkills} {totalSkills === 1 ? 'skill' : 'skills'}
                   </Text>
                 </View>
-              </>
+              </Animated.View>
             </>
           }
           ListEmptyComponent={
@@ -536,10 +526,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  flatList: {
+    flex: 1,
+  },
+
   listContent: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 30,
+    paddingBottom: 45,
+    flexGrow: 1,
   },
 
   loadingContainer: {
@@ -827,6 +822,7 @@ const styles = StyleSheet.create({
   cardActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 8,
     marginTop: 16,
   },
@@ -834,7 +830,7 @@ const styles = StyleSheet.create({
   progressButton: {
     backgroundColor: '#FCE0EA',
     paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderRadius: 10,
   },
 
@@ -847,7 +843,7 @@ const styles = StyleSheet.create({
   deleteButton: {
     backgroundColor: '#FFF0F0',
     paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderRadius: 10,
     marginLeft: 'auto',
   },
@@ -887,7 +883,7 @@ const styles = StyleSheet.create({
 
   footer: {
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 25,
   },
 
   footerText: {
